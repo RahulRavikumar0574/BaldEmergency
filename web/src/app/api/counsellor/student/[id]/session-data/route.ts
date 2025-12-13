@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,9 +6,13 @@ import { prisma } from "@/lib/prisma";
 // GET /api/counsellor/student/[id]/session-data
 // Returns predictions (latest 50) and meetings (upcoming + last 20) for a specific student, but only if the
 // logged-in user is the student's assigned counsellor.
-export async function GET(_req: Request, ctx: { params: { id: string } }) {
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const studentId = ctx.params?.id;
+    const { id } = await context.params;
+    const studentId = id;
     if (!studentId) return NextResponse.json({ error: "Missing student id" }, { status: 400 });
 
     const session = await getServerSession(authOptions);
