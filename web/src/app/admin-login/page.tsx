@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,11 +19,14 @@ export default function AdminLoginPage() {
       const res = await signIn("admin-credentials", {
         email,
         password,
-        callbackUrl: "/admin",
-        redirect: true,
+        redirect: false,
       });
-      // If using redirect true, NextAuth will navigate. In case it doesn't:
-      if ((res as any)?.error) setError((res as any).error);
+
+      if (res?.ok) {
+        router.push("/admin");
+      } else {
+        setError(res?.error || "Invalid credentials");
+      }
     } catch (e: any) {
       setError(e?.message || "Login failed");
     } finally {
