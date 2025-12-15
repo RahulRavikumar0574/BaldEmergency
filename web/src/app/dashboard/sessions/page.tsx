@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 type Meeting = {
   id: string;
-  studentId: string;
-  counsellorId: string;
+  patientId: string;
+  doctorId: string;
   startTime: string;
   endTime: string;
   reason: string;
@@ -15,7 +15,7 @@ type Meeting = {
 function startOfDay(d: Date) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
 function fmtDateKey(d: Date) { return startOfDay(d).toISOString().slice(0,10); }
 
-export default function UpcomingSessionsPage() {
+export default function PatientMeetingsPage() {
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -83,7 +83,7 @@ export default function UpcomingSessionsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-xl font-bold mb-4">Upcoming Sessions</h1>
+      <h1 className="text-xl font-bold mb-4">My Meetings</h1>
 
       {error && <p className="text-red-600 mb-3">{error}</p>}
 
@@ -137,7 +137,7 @@ export default function UpcomingSessionsPage() {
       <div className="mt-4">
         {selectedDate && (
           <div className="rounded border p-3 bg-[var(--color-surface)]">
-            <div className="font-medium mb-2">Sessions on {new Date(selectedDate).toLocaleDateString()}</div>
+            <div className="font-medium mb-2">Meetings on {new Date(selectedDate).toLocaleDateString()}</div>
             <ul className="space-y-2 text-sm">
               {(map.get(selectedDate) || []).map((m) => (
                 <li key={m.id} className="p-2 rounded border">
@@ -147,7 +147,7 @@ export default function UpcomingSessionsPage() {
                 </li>
               ))}
               {(map.get(selectedDate) || []).length === 0 && (
-                <li className="text-sm opacity-70">No sessions.</li>
+                <li className="text-sm opacity-70">No meetings.</li>
               )}
             </ul>
           </div>
@@ -158,3 +158,4 @@ export default function UpcomingSessionsPage() {
     </div>
   );
 }
+

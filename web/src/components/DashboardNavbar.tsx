@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 
 export default function DashboardNavbar() {
   const { data: session } = useSession();
-  const userName = session?.user?.name || "Student";
+  const role = (session?.user as any)?.role;
+  const userName = session?.user?.name || (role === 'DOCTOR' ? 'Doctor' : 'Patient');
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   // Initialize theme from localStorage or system preference

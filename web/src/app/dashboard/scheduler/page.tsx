@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 
 type Slot = {
   id: string;
-  counsellorId: string;
+  doctorId: string;
   startTime: string;
   endTime: string;
 };
 
 type Assigned = { id: string; name: string | null; email: string } | null;
 
-export default function SchedulerPage() {
+export default function PatientSchedulerPage() {
   const router = useRouter();
-  const [counsellorId, setCounsellorId] = useState("");
-  const [counsellor, setCounsellor] = useState<Assigned>(null);
+  const [doctorId, setDoctorId] = useState("");
+  const [doctor, setDoctor] = useState<Assigned>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [reason, setReason] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState<string>("");
@@ -23,15 +23,15 @@ export default function SchedulerPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Auto-detect assigned counsellor for the logged-in student
+  // Auto-detect assigned doctor for the logged-in patient
   useEffect(() => {
     const loadAssigned = async () => {
       try {
         const res = await fetch("/api/assignments", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok && data.counsellor?.id) {
-          setCounsellorId(data.counsellor.id);
-          setCounsellor({ id: data.counsellor.id, name: data.counsellor.name ?? null, email: data.counsellor.email });
+        if (res.ok && data.doctor?.id) {
+          setDoctorId(data.doctor.id);
+          setDoctor({ id: data.doctor.id, name: data.doctor.name ?? null, email: data.doctor.email });
         }
       } catch {}
     };
@@ -40,12 +40,12 @@ export default function SchedulerPage() {
 
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!counsellorId) return;
+      if (!doctorId) return;
       setLoading(true);
       setError(null);
       try {
         const url = new URL("/api/availability", window.location.origin);
-        url.searchParams.set("counsellorId", counsellorId);
+        url.searchParams.set("doctorId", doctorId);
         const res = await fetch(url.toString());
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch availability");
@@ -57,7 +57,7 @@ export default function SchedulerPage() {
       }
     };
     fetchSlots();
-  }, [counsellorId]);
+  }, [doctorId]);
 
   const onBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +73,7 @@ export default function SchedulerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slotId: slot.id,
-          counsellorId: slot.counsellorId,
+          doctorId: slot.doctorId,
           startTime: slot.startTime,
           endTime: slot.endTime,
           reason,
@@ -93,23 +93,23 @@ export default function SchedulerPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-2xl font-semibold">Meeting Scheduler</h1>
-      <p className="text-sm text-[var(--color-foreground)]/70">Book a session with your counsellor.</p>
+      <p className="text-sm text-[var(--color-foreground)]/70">Book a session with your doctor.</p>
 
       <div className="space-y-4">
         <div className="grid sm:grid-cols-2 gap-3 items-end">
           <div>
-            <label className="block text-sm mb-1">Assigned counsellor</label>
+            <label className="block text-sm mb-1">Assigned Doctor</label>
             <input
               className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20"
-              value={counsellor ? `${counsellor.name || counsellor.email} (${counsellor.id})` : "Detecting..."}
+              value={doctor ? `${doctor.name || doctor.email} (${doctor.id})` : "Detecting..."}
               readOnly
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Counsellor ID</label>
+            <label className="block text-sm mb-1">Doctor ID</label>
             <input
               className="w-full border rounded px-3 py-2 bg-white/60 dark:bg-black/20"
-              value={counsellorId}
+              value={doctorId}
               readOnly
             />
           </div>
@@ -136,7 +136,7 @@ export default function SchedulerPage() {
                   <div className="text-sm font-medium">
                     {new Date(s.startTime).toLocaleString()} - {new Date(s.endTime).toLocaleTimeString()}
                   </div>
-                  <div className="text-xs text-gray-600">Counsellor: {s.counsellorId}</div>
+                  <div className="text-xs text-gray-600">Doctor: {s.doctorId}</div>
                 </div>
               </li>
             ))}
@@ -169,3 +169,4 @@ export default function SchedulerPage() {
     </div>
   );
 }
+

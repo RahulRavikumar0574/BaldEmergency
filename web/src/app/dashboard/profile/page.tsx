@@ -5,15 +5,16 @@ import { useEffect, useState } from "react";
 type Profile = {
   id: string;
   name: string | null;
-  rollNo: string;
   gender?: "MALE" | "FEMALE" | "OTHER" | null;
-  degree?: string | null;
-  instituteName?: string | null;
   age?: number | null;
   email: string;
   emailVerified?: string | Date | null;
   shareReports?: boolean | null;
   profileImageUrl?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  specialCondition?: string | null;
+  address?: string | null;
 };
 
 export default function ProfilePage() {
@@ -26,10 +27,12 @@ export default function ProfilePage() {
   // Local editable fields
   const [name, setName] = useState("");
   const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "">("");
-  const [degree, setDegree] = useState("");
-  const [instituteName, setInstituteName] = useState("");
   const [age, setAge] = useState<number | "">("");
-  const [privacyReports, setPrivacyReports] = useState(true); // placeholder
+  const [height, setHeight] = useState<number | "">("");
+  const [weight, setWeight] = useState<number | "">("");
+  const [specialCondition, setSpecialCondition] = useState("");
+  const [address, setAddress] = useState("");
+  const [privacyReports, setPrivacyReports] = useState(true);
   const [profileImageUrl, setProfileImageUrl] = useState("");
 
   // Change password local state
@@ -59,11 +62,13 @@ export default function ProfilePage() {
         setProfile(u);
         setName(u.name ?? "");
         setGender((u.gender as any) ?? "");
-        setDegree(u.degree ?? "");
-        setInstituteName(u.instituteName ?? "");
         setAge(typeof u.age === "number" ? u.age : "");
-        setPrivacyReports(typeof (u as any).shareReports === "boolean" ? (u as any).shareReports : true);
-        setProfileImageUrl((u as any).profileImageUrl ?? "");
+        setHeight(typeof u.height === "number" ? u.height : "");
+        setWeight(typeof u.weight === "number" ? u.weight : "");
+        setSpecialCondition(u.specialCondition ?? "");
+        setAddress(u.address ?? "");
+        setPrivacyReports(typeof u.shareReports === "boolean" ? u.shareReports : true);
+        setProfileImageUrl(u.profileImageUrl ?? "");
       } catch (e: any) {
         setError(e.message || "Failed to load profile");
       } finally {
@@ -98,9 +103,11 @@ export default function ProfilePage() {
         body: JSON.stringify({
           name,
           gender: gender || null,
-          degree: degree || null,
-          instituteName: instituteName || null,
           age: age === "" ? null : Number(age),
+          height: height === "" ? null : Number(height),
+          weight: weight === "" ? null : Number(weight),
+          specialCondition: specialCondition || null,
+          address: address || null,
           shareReports: !!privacyReports,
           profileImageUrl: profileImageUrl || null,
         }),
@@ -160,60 +167,37 @@ export default function ProfilePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm mb-1">Degree</label>
-              <input
-                type="text"
-                className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20"
-                value={degree}
-                onChange={(e) => setDegree(e.target.value)}
-              />
+              <label className="block text-sm mb-1">Age</label>
+              <input type="number" min={0} className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20" value={age} onChange={(e) => setAge(e.target.value === "" ? "" : Number(e.target.value))} />
             </div>
             <div>
-              <label className="block text-sm mb-1">Institute name</label>
-              <input
-                type="text"
-                className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20"
-                value={instituteName}
-                onChange={(e) => setInstituteName(e.target.value)}
-              />
+              <label className="block text-sm mb-1">Address</label>
+              <input type="text" className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20" value={address} onChange={(e) => setAddress(e.target.value)} />
             </div>
           </div>
 
           {/* Right column */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm mb-1">Student roll number</label>
-              <input
-                type="text"
-                className="w-full border rounded px-3 py-2 bg-white/60 dark:bg-black/10"
-                value={profile.rollNo}
-                disabled
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">College email</label>
+              <label className="block text-sm mb-1">Email</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="email"
-                  className="w-full border rounded px-3 py-2 bg-white/60 dark:bg-black/10"
-                  value={profile.email}
-                  disabled
-                />
+                <input type="email" className="w-full border rounded px-3 py-2 bg-white/60 dark:bg-black/10" value={profile.email} disabled />
                 <span className={`text-xs px-2 py-1 rounded ${verified ? "bg-[var(--color-success)]/20 text-[var(--color-success)]" : "bg-[var(--color-alert)]/20 text-[var(--color-alert)]"}`}>
                   {verified ? "Verified" : "Unverified"}
                 </span>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1">Age</label>
-              <input
-                type="number"
-                min={15}
-                max={100}
-                className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20"
-                value={age}
-                onChange={(e) => setAge(e.target.value === "" ? "" : Number(e.target.value))}
-              />
+              <label className="block text-sm mb-1">Height (cm)</label>
+              <input type="number" min={0} className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20" value={height} onChange={(e) => setHeight(e.target.value === "" ? "" : Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Weight (kg)</label>
+              <input type="number" min={0} className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20" value={weight} onChange={(e) => setWeight(e.target.value === "" ? "" : Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Special Condition</label>
+              <input type="text" className="w-full border rounded px-3 py-2 bg-white/80 dark:bg-black/20" value={specialCondition} onChange={(e) => setSpecialCondition(e.target.value)} />
             </div>
 
             {/* Profile picture url + preview */}
@@ -250,7 +234,7 @@ export default function ProfilePage() {
                   onChange={(e) => setPrivacyReports(e.target.checked)}
                 />
                 <label htmlFor="privacy-reports" className="text-sm">
-                  Allow counsellor to view my progress reports
+                  Allow doctor to view my progress reports
                 </label>
               </div>
               <div className="flex items-center gap-2">
