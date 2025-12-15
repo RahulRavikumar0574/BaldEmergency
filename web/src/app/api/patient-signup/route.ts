@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { Role } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
@@ -30,12 +31,6 @@ export async function POST(req: Request) {
     }
     const { name, gender, instituteName, degree, rollNo, age, email, password } = parsed.data;
 
-    // Gmail-only hint per current spec
-    const emailDomain = email.split("@")[1];
-    if (!emailDomain || !emailDomain.endsWith("gmail.com")) {
-      return NextResponse.json({ error: "Please use your official Gmail address" }, { status: 400 });
-    }
-
     const existing = await prisma.user.findFirst({
       where: { OR: [{ email }, { rollNo }] },
     });
@@ -51,7 +46,7 @@ export async function POST(req: Request) {
         rollNo,
         email,
         passwordHash,
-        role: "STUDENT",
+        role: Role.PATIENT,
         gender: gender ?? null,
         instituteName: instituteName ?? null,
         degree: degree ?? null,
@@ -60,24 +55,25 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    // Best-effort: assign this student to a random counsellor
+    // Best-effort: assign this patient to a random doctor
     try {
-      const counsellors = await prisma.user.findMany({ where: { role: "COUNSELLOR" }, select: { id: true } });
-      if (counsellors.length > 0) {
-        const random = counsellors[Math.floor(Math.random() * counsellors.length)];
+      const doctors = await prisma.user.findMany({ where: { role: Role.DOCTOR }, select: { id: true } });
+      if (doctors.length > 0) {
+        const random = doctors[Math.floor(Math.random() * doctors.length)];
         const id = randomUUID();
-        await prisma.$executeRawUnsafe(
-          'INSERT INTO "Assignment" ("id", "studentId", "counsellorId") VALUES ($1, $2, $3) ON CONFLICT ("studentId") DO NOTHING',
-          id,
-          created.id,
-          random.id
-        );
+        await prisma.assignment.create({
+          data: {
+            id,
+            patientId: created.id,
+            doctorId: random.id,
+          },
+        });
       }
     } catch {}
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("/api/signup error", err);
+    console.error("/api/patient-signup error", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

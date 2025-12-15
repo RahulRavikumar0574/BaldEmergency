@@ -1,37 +1,34 @@
+import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
-import type { NextAuthOptions } from "next-auth";
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  // Use JWT strategy for Credentials provider compatibility
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
-    // Student login (default)
     Credentials({
-      id: "student-credentials",
-      name: "Student Credentials",
+      id: "patient-credentials",
+      name: "Patient Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const email = credentials.email.toLowerCase();
+        const email = (credentials.email as string).toLowerCase();
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || user.role !== "STUDENT") return null;
-        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!user || user.role !== "PATIENT") return null;
+        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
         if (!valid) return null;
-        return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+        return { id: user.id, name: user.name, email: user.email, role: user.role };
       },
     }),
-    // Counsellor login (requires employeeId)
     Credentials({
-      id: "counsellor-credentials",
-      name: "Counsellor Credentials",
+      id: "doctor-credentials",
+      name: "Doctor Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         employeeId: { label: "Employee ID", type: "text" },
@@ -39,17 +36,15 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password || !credentials?.employeeId) return null;
-        const email = credentials.email.toLowerCase();
+        const email = (credentials.email as string).toLowerCase();
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || user.role !== "COUNSELLOR") return null;
-        // We store Employee ID in the rollNo column
+        if (!user || user.role !== "DOCTOR") return null;
         if (!user.rollNo || user.rollNo !== credentials.employeeId) return null;
-        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
         if (!valid) return null;
-        return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+        return { id: user.id, name: user.name, email: user.email, role: user.role };
       },
     }),
-    // Admin login
     Credentials({
       id: "admin-credentials",
       name: "Admin Credentials",
@@ -59,12 +54,12 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const email = credentials.email.toLowerCase();
+        const email = (credentials.email as string).toLowerCase();
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || user.role !== "ADMIN") return null;
-        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
         if (!valid) return null;
-        return { id: user.id, name: user.name, email: user.email, role: user.role } as any;
+        return { id: user.id, name: user.name, email: user.email, role: user.role };
       },
     }),
   ],
@@ -73,19 +68,18 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      // On sign in, persist the user id to the token
       if (user) {
-        ;(token as any).id = (user as any).id;
-        ;(token as any).role = (user as any).role;
+        token.id = user.id;
+        (token as any).role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token) {
-        (session.user as any).id = (token as any).id;
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
         (session.user as any).role = (token as any).role;
       }
       return session;
     },
   },
-};
+});

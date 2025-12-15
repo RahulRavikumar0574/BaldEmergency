@@ -1,31 +1,30 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 
-// GET /api/availability?counsellorId=...&from=ISO&to=ISO
+// GET /api/availability?doctorId=...&from=ISO&to=ISO
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const counsellorId = searchParams.get("counsellorId");
+    const doctorId = searchParams.get("doctorId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    if (!counsellorId) {
-      return NextResponse.json({ error: "counsellorId is required" }, { status: 400 });
+    if (!doctorId) {
+      return NextResponse.json({ error: "doctorId is required" }, { status: 400 });
     }
 
-    const clauses: string[] = ['"counsellorId" = $1'];
-    const params: any[] = [counsellorId];
+    const clauses: string[] = ['"doctorId" = $1'];
+    const params: any[] = [doctorId];
     if (from) { clauses.push('"startTime" >= $' + (params.length + 1)); params.push(new Date(from)); }
     if (to) { clauses.push('"startTime" <= $' + (params.length + 1)); params.push(new Date(to)); }
 
-    const sql = `SELECT "id","counsellorId","startTime","endTime" FROM "Availability"
+    const sql = `SELECT "id","doctorId","startTime","endTime" FROM "Availability"
                  WHERE ${clauses.join(" AND ")}
                  ORDER BY "startTime" ASC`;
     const slots = (await prisma.$queryRawUnsafe(sql, ...params)) as Array<{
-      id: string; counsellorId: string; startTime: string; endTime: string;
+      id: string; doctorId: string; startTime: string; endTime: string;
     }>;
 
     return NextResponse.json({ slots });
@@ -35,17 +34,17 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/availability - create or upsert counsellor slots
+// POST /api/availability - create or upsert doctor slots
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const role = (session.user as any)?.role as string | undefined;
     const email = (session.user as any)?.email as string | undefined;
     if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const me = await prisma.user.findUnique({ where: { email: email.toLowerCase() }, select: { id: true, role: true } });
     if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (role !== "COUNSELLOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (role !== "DOCTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json();
     const { slots } = body as { slots?: Array<{ startTime: string; endTime: string }>; };
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
       if (!s?.startTime || !s?.endTime) continue;
       const id = randomUUID();
       await prisma.$executeRawUnsafe(
-        'INSERT INTO "Availability" ("id","counsellorId","startTime","endTime") VALUES ($1,$2,$3,$4)',
+        'INSERT INTO "Availability" ("id","doctorId","startTime","endTime") VALUES ($1,$2,$3,$4)',
         id,
         me.id,
         new Date(s.startTime),

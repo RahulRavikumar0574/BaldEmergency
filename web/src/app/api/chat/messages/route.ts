@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 
@@ -11,7 +10,7 @@ export async function OPTIONS() {
 
 // GET /api/chat/messages?conversationId=...
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const conversationId = searchParams.get("conversationId");
@@ -29,7 +28,7 @@ export async function GET(req: Request) {
 
 // POST { conversationId, text }
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const me = await prisma.user.findUnique({ where: { email: session.user.email.toLowerCase() }, select: { id: true, role: true } });
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,15 +37,15 @@ export async function POST(req: Request) {
   const { conversationId, text } = body as { conversationId?: string; text?: string };
   if (!conversationId || !text || !text.trim()) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  // Simple access check: user must be either the student or counsellor participant
+  // Simple access check: user must be either the patient or doctor participant
   try {
     const rows = (await prisma.$queryRawUnsafe(
-      'SELECT "id","studentId","counsellorId" FROM "Conversation" WHERE "id" = $1 LIMIT 1',
+      'SELECT "id","patientId","doctorId" FROM "Conversation" WHERE "id" = $1 LIMIT 1',
       conversationId
-    )) as Array<{ id: string; studentId: string; counsellorId: string }>;
+    )) as Array<{ id: string; patientId: string; doctorId: string }>;
     const convo = rows?.[0];
     if (!convo) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (convo.studentId !== me.id && convo.counsellorId !== me.id) {
+    if (convo.patientId !== me.id && convo.doctorId !== me.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const id = randomUUID();

@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/assignments
-// - If caller is STUDENT: returns their assigned counsellor's basic info
-// - If caller is COUNSELLOR: returns list of assigned students' basic info
+// - If caller is PATIENT: returns their assigned doctor's basic info
+// - If caller is DOCTOR: returns list of assigned patients' basic info
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -15,27 +14,27 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    if (me.role === "STUDENT") {
+    if (me.role === "PATIENT") {
       const rows = (await prisma.$queryRawUnsafe(
-        'SELECT "counsellorId" FROM "Assignment" WHERE "studentId" = $1 LIMIT 1',
+        'SELECT "doctorId" FROM "Assignment" WHERE "patientId" = $1 LIMIT 1',
         me.id
-      )) as Array<{ counsellorId: string }>;
+      )) as Array<{ doctorId: string }>;
       const assign = rows?.[0];
-      if (!assign) return NextResponse.json({ counsellor: null });
-      const counsellor = await prisma.user.findUnique({ where: { id: assign.counsellorId }, select: { id: true, name: true, email: true, rollNo: true, instituteName: true } });
-      return NextResponse.json({ counsellor });
+      if (!assign) return NextResponse.json({ doctor: null });
+      const doctor = await prisma.user.findUnique({ where: { id: assign.doctorId }, select: { id: true, name: true, email: true, rollNo: true, instituteName: true } });
+      return NextResponse.json({ doctor });
     }
-    if (me.role === "COUNSELLOR") {
+    if (me.role === "DOCTOR") {
       const assigns = (await prisma.$queryRawUnsafe(
-        'SELECT "studentId" FROM "Assignment" WHERE "counsellorId" = $1',
+        'SELECT "patientId" FROM "Assignment" WHERE "doctorId" = $1',
         me.id
-      )) as Array<{ studentId: string }>;
-      const students: any[] = [];
+      )) as Array<{ patientId: string }>;
+      const patients: any[] = [];
       for (const a of assigns || []) {
-        const s = await prisma.user.findUnique({ where: { id: a.studentId }, select: { id: true, name: true, email: true, rollNo: true, instituteName: true } });
-        if (s) students.push(s);
+        const p = await prisma.user.findUnique({ where: { id: a.patientId }, select: { id: true, name: true, email: true, rollNo: true, instituteName: true } });
+        if (p) patients.push(p);
       }
-      return NextResponse.json({ students });
+      return NextResponse.json({ patients });
     }
     return NextResponse.json({});
   } catch (e: any) {

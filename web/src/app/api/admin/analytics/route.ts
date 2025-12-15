@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/admin/analytics - global prediction aggregates
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const role = (session?.user as any)?.role;
   if (!session || role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
@@ -23,7 +22,7 @@ export async function GET() {
 
     // Users overview
     const usersByRole = await prisma.user.groupBy({ by: ['role'], _count: { role: true } }).catch(() => [] as any);
-    const users = { STUDENT: 0, COUNSELLOR: 0, ADMIN: 0 } as Record<string, number>;
+    const users = { PATIENT: 0, DOCTOR: 0, ADMIN: 0 } as Record<string, number>;
     for (const r of usersByRole as any[]) users[r.role] = r._count?.role || 0;
 
     return NextResponse.json({ summary, users });

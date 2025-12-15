@@ -1,31 +1,30 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/admin/records/predictions
-// Exports all Prediction rows as CSV with student info
+// Exports all Prediction rows as CSV with patient info
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const role = (session?.user as any)?.role;
   if (!session || role !== "ADMIN") {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
   try {
-    // Aggregate predictions per student (no email) with counts of each emotion
+    // Aggregate predictions per patient (no email) with counts of each emotion
     const rows = (await prisma.$queryRawUnsafe(
-      `SELECT p."studentId" AS "studentId",
+      `SELECT p."patientId" AS "patientId",
               SUM(CASE WHEN UPPER(p."emotion") = 'NEGATIVE' THEN 1 ELSE 0 END)::int AS "negative",
               SUM(CASE WHEN UPPER(p."emotion") = 'NEUTRAL'  THEN 1 ELSE 0 END)::int AS "neutral",
               SUM(CASE WHEN UPPER(p."emotion") = 'POSITIVE' THEN 1 ELSE 0 END)::int AS "positive",
               COUNT(*)::int AS "total",
               MAX(p."createdAt") AS "lastAt"
          FROM "Prediction" p
-         GROUP BY p."studentId"
+         GROUP BY p."patientId"
          ORDER BY "total" DESC`
     )) as Array<{
-      studentId: string;
+      patientId: string;
       negative: number;
       neutral: number;
       positive: number;
@@ -34,7 +33,7 @@ export async function GET() {
     }>;
 
     const header = [
-      'student_id','negative_count','neutral_count','positive_count','total','last_prediction_at'
+      'patient_id','negative_count','neutral_count','positive_count','total','last_prediction_at'
     ];
 
     function esc(v: any): string {
@@ -48,7 +47,7 @@ export async function GET() {
     lines.push(header.join(','));
     for (const r of rows) {
       lines.push([
-        esc(r.studentId),
+        esc(r.patientId),
         esc(r.negative),
         esc(r.neutral),
         esc(r.positive),

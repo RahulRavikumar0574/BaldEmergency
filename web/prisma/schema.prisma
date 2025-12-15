@@ -9,59 +9,63 @@ datasource db {
 }
 
 model User {
-  id                                           String         @id @default(cuid())
-  name                                         String
-  rollNo                                       String         @unique
-  email                                        String         @unique
-  passwordHash                                 String
-  createdAt                                    DateTime       @default(now())
-  updatedAt                                    DateTime       @updatedAt
-  emailVerified                                DateTime?
-  age                                          Int?
-  degree                                       String?
-  gender                                       Gender?
-  instituteName                                String?
-  role                                         Role           @default(STUDENT)
-  shareReports                                 Boolean?       @default(true)
-  profileImageUrl                              String?
-  phone                                        String?
-  accounts                                     Account[]
-  ActivityLog                                  ActivityLog[]
-  Assignment_Assignment_counsellorIdToUser     Assignment[]   @relation("Assignment_counsellorIdToUser")
-  Assignment_Assignment_studentIdToUser        Assignment?    @relation("Assignment_studentIdToUser")
-  availabilities                               Availability[]
-  Conversation_Conversation_counsellorIdToUser Conversation[] @relation("Conversation_counsellorIdToUser")
-  Conversation_Conversation_studentIdToUser    Conversation[] @relation("Conversation_studentIdToUser")
-  meetingsAsCounsellor                         Meeting[]      @relation("CounsellorMeetings")
-  meetingsAsStudent                            Meeting[]      @relation("StudentMeetings")
-  Message                                      Message[]
-  sessions                                     Session[]
+  id                 String         @id @default(cuid())
+  name               String
+  rollNo             String         @unique // Using for patient ID or doctor employee ID
+  email              String         @unique
+  passwordHash       String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  emailVerified      DateTime?
+  age                Int?
+  degree             String? // Can be repurposed for doctor's specialization
+  gender             Gender?
+  instituteName      String? // Can be repurposed for hospital name
+  role               Role           @default(PATIENT)
+  shareReports       Boolean?       @default(true)
+  profileImageUrl    String?
+  phone              String?
+  height             Int?
+  weight             Int?
+  specialCondition   String?
+  address            String?
+  accounts           Account[]
+  ActivityLog        ActivityLog[]
+  assignmentsAsDoctor  Assignment[]   @relation("DoctorAssignments")
+  assignmentAsPatient  Assignment?    @relation("PatientAssignment")
+  availabilities     Availability[]
+  conversationsAsDoctor Conversation[] @relation("DoctorConversations")
+  conversationsAsPatient Conversation[] @relation("PatientConversations")
+  meetingsAsDoctor   Meeting[]      @relation("DoctorMeetings")
+  meetingsAsPatient  Meeting[]      @relation("PatientMeetings")
+  Message            Message[]
+  sessions           Session[]
 }
 
 model Availability {
-  id           String   @id @default(cuid())
-  counsellorId String
-  startTime    DateTime @db.Timestamptz(6)
-  endTime      DateTime @db.Timestamptz(6)
-  counsellor   User     @relation(fields: [counsellorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id        String   @id @default(cuid())
+  doctorId  String
+  startTime DateTime @db.Timestamptz(6)
+  endTime   DateTime @db.Timestamptz(6)
+  doctor    User     @relation(fields: [doctorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([counsellorId, startTime], map: "idx_avail_counsellor_start")
+  @@index([doctorId, startTime], map: "idx_avail_doctor_start")
 }
 
 model Meeting {
-  id           String   @id @default(cuid())
-  studentId    String
-  counsellorId String
-  startTime    DateTime @db.Timestamptz(6)
-  endTime      DateTime @db.Timestamptz(6)
-  reason       String
-  status       String   @default("PENDING")
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
-  counsellor   User     @relation("CounsellorMeetings", fields: [counsellorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student      User     @relation("StudentMeetings", fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id        String   @id @default(cuid())
+  patientId String
+  doctorId  String
+  startTime DateTime @db.Timestamptz(6)
+  endTime   DateTime @db.Timestamptz(6)
+  reason    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  doctor    User     @relation("DoctorMeetings", fields: [doctorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  patient   User     @relation("PatientMeetings", fields: [patientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([counsellorId, startTime], map: "idx_meeting_counsellor_start")
-  @@index([studentId, startTime], map: "idx_meeting_student_start")
+  @@index([doctorId, startTime], map: "idx_meeting_doctor_start")
+  @@index([patientId, startTime], map: "idx_meeting_patient_start")
 }
 
 model Account {
@@ -114,27 +118,27 @@ model ActivityLog {
 }
 
 model Assignment {
-  id                                 String   @id
-  studentId                          String   @unique(map: "uniq_assignment_student")
-  counsellorId                       String
-  createdAt                          DateTime @default(now()) @db.Timestamptz(6)
-  User_Assignment_counsellorIdToUser User     @relation("Assignment_counsellorIdToUser", fields: [counsellorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  User_Assignment_studentIdToUser    User     @relation("Assignment_studentIdToUser", fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id        String   @id
+  patientId String   @unique(map: "uniq_assignment_patient")
+  doctorId  String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  doctor    User     @relation("DoctorAssignments", fields: [doctorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  patient   User     @relation("PatientAssignment", fields: [patientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([counsellorId], map: "idx_assignment_counsellor")
+  @@index([doctorId], map: "idx_assignment_doctor")
 }
 
 model Conversation {
-  id                                   String    @id
-  studentId                            String
-  counsellorId                         String
-  createdAt                            DateTime  @default(now()) @db.Timestamptz(6)
-  User_Conversation_counsellorIdToUser User      @relation("Conversation_counsellorIdToUser", fields: [counsellorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  User_Conversation_studentIdToUser    User      @relation("Conversation_studentIdToUser", fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  Message                              Message[]
+  id        String    @id
+  patientId String
+  doctorId  String
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  doctor    User      @relation("DoctorConversations", fields: [doctorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  patient   User      @relation("PatientConversations", fields: [patientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Message   Message[]
 
-  @@unique([studentId, counsellorId], map: "uniq_convo_student_counsellor")
-  @@index([counsellorId], map: "idx_convo_counsellor")
+  @@unique([patientId, doctorId], map: "uniq_convo_patient_doctor")
+  @@index([doctorId], map: "idx_convo_doctor")
 }
 
 model Message {
@@ -151,17 +155,17 @@ model Message {
 
 model Prediction {
   id        String   @id
-  studentId String
+  patientId String
   emotion   String
   createdAt DateTime @default(now()) @db.Timestamp(6)
 
   @@index([createdAt])
-  @@index([studentId])
+  @@index([patientId])
 }
 
 enum Role {
-  STUDENT
-  COUNSELLOR
+  PATIENT
+  DOCTOR
   ADMIN
 }
 

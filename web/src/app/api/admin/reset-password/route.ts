@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
@@ -9,7 +8,7 @@ import bcrypt from "bcrypt";
 // Only ADMIN can use this. For development convenience.
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const role = (session?.user as any)?.role;
     if (!session || role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
