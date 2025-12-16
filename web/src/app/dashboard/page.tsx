@@ -16,7 +16,7 @@ type MeetingWithDoctor = {
 export default async function PatientDashboardPage() {
   const session = await auth();
   if (!session || (session.user as any).role !== "PATIENT") {
-    redirect("/patient-login");
+    redirect("/login");
   }
 
   const meetings: MeetingWithDoctor[] = await prisma.meeting.findMany({
